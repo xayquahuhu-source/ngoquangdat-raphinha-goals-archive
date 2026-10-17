@@ -9,12 +9,13 @@ const {
   autoSync,
   addCustomUrl
 } = require('./services/youtubeAggregator');
+const { handleChat } = require('./services/aiAssistant');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Helper to load Career Archive
@@ -223,6 +224,35 @@ app.post('/api/reset-default', (req, res) => {
     res.json({ success: true, message: 'Đã sẵn sàng' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Kiểm tra trạng thái AI và danh sách mô hình (4.0 Argon -> 3.8 Flash -> 3.5 Lite)
+app.get('/api/ai-status', (req, res) => {
+  const aiConfig = require('./config/aiConfig');
+  res.json({
+    success: true,
+    isKeyConfigured: aiConfig.isKeyConfigured(),
+    primaryModel: aiConfig.primaryModel,
+    modelCascade: aiConfig.modelCascade,
+    message: aiConfig.isKeyConfigured()
+      ? `Đã kết nối Google Gemini API. Ưu tiên mô hình: ${aiConfig.primaryModel}`
+      : 'Chưa cấu hình GEMINI_API_KEY trong file .env trên server.'
+  });
+});
+
+// API: Trợ Lý Chuyên Gia AI Raphinha Pro (Gemini Pro Engine)
+app.post('/api/ai-chat', async (req, res) => {
+  try {
+    const { message, history, userImage } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, error: 'Tin nhắn không được để trống!' });
+    }
+    const result = await handleChat({ message, history, userImage });
+    res.json(result);
+  } catch (err) {
+    console.error('Lỗi API /api/ai-chat:', err);
+    res.status(500).json({ success: false, error: err.message || 'Lỗi xử lý AI' });
   }
 });
 

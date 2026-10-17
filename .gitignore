@@ -14,3 +14,7 @@ Thumbs.db
 
 # Temporary scratch
 scratch/
+
+# Runtime generated images
+public/images/ai_generated/*
+!public/images/ai_generated/.gitkeep
